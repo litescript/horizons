@@ -9,17 +9,27 @@
 
   <body>
     <main>
-      <h1>Horizons</h1>
+      
+      <section id="splash">
+        <h1>Horizons</h1>
 
-      <p class="subtitle">
-        Interactive visualization of our solar system.
-      </p>
-      <p class="powered">
-        Powered by
-        <a href="https://github.com/litescript/ls-horizons" target="_blank" rel="noopener noreferrer">ls-horizons</a>
-      </p>
+        <p class="subtitle">
+          Interactive visualization of our solar system.
+        </p>
+        <p class="powered">
+          Powered by
+          <a href="https://github.com/litescript/ls-horizons" target="_blank" rel="noopener noreferrer">ls-horizons</a>
+        </p>
 
-      <p class="status">Under construction.</p>
+        <p class="status">Under construction</p>
+      </section>
+
+      <section id="space-scene">
+        <div id="system-container">
+          <canvas id="scene-canvas"></canvas>
+        </div>
+      </section>
+
     </main>
 
     <script type="module" src="/src/main.js"></script>

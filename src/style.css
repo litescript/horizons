@@ -70,3 +70,8 @@ h1 {
 .powered a:hover {
   text-decoration-color: currentColor;
 }
+
+#scene-canvas {
+  display: none;
+  visibility: hidden;
+}
