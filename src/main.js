@@ -64,6 +64,45 @@ function resizeScene() {
 
 window.addEventListener('resize', resizeScene);
 
+async function loadData() {
+  const [solarResponse, dsnResponse] = await Promise.all([
+    fetch('/api/solarsystem.json'),
+    fetch('/api/dsn.json'),
+  ]);
+
+  if (!solarResponse.ok) {
+    throw new Error(`Solar system request failed: ${solarResponse.status}`);
+  }
+
+  if (!dsnResponse.ok) {
+    throw new Error(`Solar system request failed: ${dsnResponse.status}`);
+  }
+
+  const [solarSystem, dsn] = await Promise.all([
+    solarResponse.json(),
+    dsnResponse.json(),
+  ]);
+
+  return { solarSystem, dsn };
+}
+
+async function initialize() {
+  try {
+    const { solarSystem, dsn } = await loadData();
+
+    // buildSolarSystem(solarSystem);
+    // buildDsnLinks(dsn);
+
+    resizeScene();
+    renderer.setAnimationLoop(animate);
+    if (solarSystem && dsn) {
+      alert('ladies and gentlemen, we got em');
+    }
+  } catch (error) {
+    console.error('Could not initialize Horizons:', error);
+  }
+}
+
 // animation loop
 function animate(time) {
   // rotate the sun
@@ -79,6 +118,4 @@ if (isDev) {
   sceneCanvas.style.visibility = 'visible';
 }
 
-resizeScene();
-renderer.setAnimationLoop(animate);
-
+initialize();
