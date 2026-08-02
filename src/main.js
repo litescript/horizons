@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 ///////////////////////////////////////////////////////////////////////
 //    dev toggle //////////////////////////////////////////////////////
-const isDev = false;
+const isDev = true;
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
@@ -32,13 +32,18 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 // the sun
+const sunLoader = new THREE.TextureLoader();
+const sunTexture = await sunLoader.loadAsync(
+  'textures/2k_sun.jpg'
+);
 const sunGeometry = new THREE.SphereGeometry(
-  15,   // radius (def: 1)
-  32,   // widthSegments (def: 32)
-  16,   // heightSegments (def: 16)
+  5,   // radius (def: 1)
+  40,   // widthSegments (def: 32)
+  30,   // heightSegments (def: 16)
 );
 const sunMaterial = new THREE.MeshBasicMaterial({
-  color: 0xff5500,
+  map: sunTexture,
+  //  color: 0xff5500,
 });
 const sun = new THREE.Mesh(sunGeometry, sunMaterial);
 
@@ -62,7 +67,7 @@ window.addEventListener('resize', resizeScene);
 // animation loop
 function animate(time) {
   // rotate the sun
-  sun.rotation.x = time / 1000;
+  sun.rotation.y = time / 5000;
 
   renderer.render(scene, camera);
 }
