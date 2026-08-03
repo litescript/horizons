@@ -86,6 +86,8 @@ async function loadData() {
   return { solarSystem, dsn };
 }
 
+const bodies = {};
+
 async function initialize() {
   try {
     const { solarSystem, dsn } = await loadData();
@@ -96,7 +98,14 @@ async function initialize() {
     resizeScene();
     renderer.setAnimationLoop(animate);
     if (solarSystem && dsn) {
-      alert('ladies and gentlemen, we got em');
+      console.log('Ladies and gentlemen, we got em:');
+      console.log('Solar System:', solarSystem);
+      console.log('DSN:', dsn);
+
+      for (const body of solarSystem.bodies) {
+        bodies[body.name] = body;
+      }
+      console.log(bodies);
     }
   } catch (error) {
     console.error('Could not initialize Horizons:', error);
