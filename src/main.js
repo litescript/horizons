@@ -24,6 +24,11 @@ const bodyConfig = {
     texture: 'textures/2k_sun.jpg',
     radius: 5,
     material: 'basic',
+    materialOptions: {
+      emissive: 0xffffff,
+      emissiveIntensity: 5.5,
+      emissiveMap: true,
+    },
   },
 
   Mercury: {
@@ -97,8 +102,18 @@ controls.dampingFactor = 0.05;
 controls.target.set(0, 0, 0);
 controls.update();
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+const ambientLight = new THREE.AmbientLight(0x223344, 0.15);
 scene.add(ambientLight);
+
+const sunLight = new THREE.PointLight(
+  0xfff4e8,
+  20_000,
+  0,
+  2,
+);
+
+sunLight.position.set(0, 0, 0);
+scene.add(sunLight);
 
 const textureLoader = new THREE.TextureLoader();
 
