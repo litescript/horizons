@@ -8,7 +8,7 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
 
   display: grid;
   place-items: center;
@@ -120,6 +120,16 @@ h1 {
 }
 
 #under-construction.bottom {
-  top: calc(100vh - 3rem);
+  top: calc(100dvh - 3rem - env(safe-area-inset-bottom));
 
+}
+
+@media (max-width: 768px) {
+  #splash {
+    padding-top: 0;
+  }
+
+  #under-construction{
+    top: 64%;
+  }
 }
