@@ -330,12 +330,12 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-if (isDev) {
-  splashScreen.style.display = 'none';
-  sceneCanvas.style.display = 'block';
-  sceneCanvas.style.zIndex = 1;
-  sceneCanvas.style.visibility = 'visible';
-}
+// if (isDev) {
+//   splashScreen.style.display = 'none';
+//   sceneCanvas.style.display = 'block';
+//   sceneCanvas.style.zIndex = 1;
+//   sceneCanvas.style.visibility = 'visible';
+// }
 
 sceneCanvas.addEventListener('mousedown', () => {
   sceneCanvas.classList.add('grabbing');
@@ -344,4 +344,22 @@ sceneCanvas.addEventListener('mouseup', () => {
   sceneCanvas.classList.remove('grabbing');
 });
 window.addEventListener('resize', resizeScene);
-initialize();
+
+const minimumSplashTime = new Promise((resolve) => {
+  setTimeout(resolve, 3000);
+});
+
+await Promise.all([
+  initialize(),
+  minimumSplashTime,
+]);
+
+requestAnimationFrame(() => {
+  splashScreen.classList.add('is-hidden');
+  sceneCanvas.classList.add('is-visible');
+});
+
+setTimeout(() => {
+  splashScreen.style.display = 'none';
+}, 400);
+
