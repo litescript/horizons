@@ -8,6 +8,7 @@ console.log('Horizons initialized.');
 const sceneCanvas = document.getElementById('scene-canvas');
 const splashScreen = document.getElementById('splash');
 const underConstruction = document.getElementById('under-construction');
+const idBox = document.getElementById('id-box');
 sceneCanvas.width = window.innerWidth;
 sceneCanvas.height = window.innerHeight;
 const aspectRatio = sceneCanvas.width / sceneCanvas.height;
@@ -35,62 +36,129 @@ const bodyConfig = {
     texture: 'textures/2k_sun.jpg',
     radius: 5,
     material: 'basic',
-    materialOptions: {
-      emissive: 0xffffff,
-      emissiveIntensity: 5.5,
-      emissiveMap: true,
-    },
   },
 
   Mercury: {
     texture: 'textures/2k_mercury.jpg',
     radius: 0.8,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Venus: {
     texture: 'textures/2k_venus.jpg',
     radius: 0.9,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Earth: {
     texture: 'textures/2k_earth_daymap.jpg',
     radius: 1,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Mars: {
     texture: 'textures/2k_mars.jpg',
     radius: 0.8,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Jupiter: {
     texture: 'textures/2k_jupiter.jpg',
     radius: 3,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Saturn: {
     texture: 'textures/2k_saturn.jpg',
     radius: 2,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Uranus: {
     texture: 'textures/2k_uranus.jpg',
     radius: 2,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 
   Neptune: {
     texture: 'textures/2k_neptune.jpg',
     radius: 2,
     material: 'standard',
+    materialOptions: {
+      emissive: 0x222222,
+    }
   },
 }
 // ---------------------------------------------------------
+
+
+// RAYCASTER PICKING CLASS ---------------------------------
+
+class PickHelper {
+  constructor() {
+    this.raycaster = new THREE.Raycaster();
+    this.pickedObject = null;
+    this.pickedObjectSavedColor = 0;
+  }
+  pick(normalizedPosition, pickableObjects, camera) {
+    // restore the color if there is a picked object
+    if (this.pickedObject?.material.emissive) {
+      this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
+    }
+
+    this.pickedObject = null;
+
+    // cast a ray through the frustrum
+    this.raycaster.setFromCamera(normalizedPosition, camera);
+    // get the list of objects the ray intersected
+    const intersectedObjects = this.raycaster.intersectObjects(pickableObjects);
+
+    if (intersectedObjects.length === 0) {
+      return;
+    }
+
+    const object = intersectedObjects[0].object;
+
+    if (!object.material.emissive) {
+      return;
+    }
+
+    this.pickedObject = object;
+    this.pickedObjectSavedColor =
+      object.material.emissive.getHex();
+
+    if (object.material.emissive) {
+      object.material.emissive.setHex(0x0000ff);
+    } else {
+      object.scale.setScalar(1.1);
+    }
+
+  }
+}
+
+// ---------------------------------------------------------
+
 
 // basic scene setup
 const scene = new THREE.Scene();
@@ -129,6 +197,28 @@ scene.add(sunLight);
 
 const textureLoader = new THREE.TextureLoader();
 
+const pickPosition = {x: 0, y: 0};
+clearPickPosition();
+
+function getsceneCanvasRelativePosition(event) {
+  const rect = sceneCanvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - rect.left) * sceneCanvas.width / rect.width,
+    y: (event.clientY - rect.top) * sceneCanvas.height / rect.height,
+  };
+}
+
+function setPickPosition(event) {
+  const pos = getsceneCanvasRelativePosition(event);
+  pickPosition.x = (pos.x / sceneCanvas.width) * 2 - 1;
+  pickPosition.y = (pos.y / sceneCanvas.height) * -2 + 1; // invert Y
+}
+
+function clearPickPosition() {
+  pickPosition.x = -1000000;
+  pickPosition.y = -1000000;
+}
+
 async function createBodyMesh(body) {
   const config = bodyConfig[body.name];
 
@@ -144,10 +234,14 @@ async function createBodyMesh(body) {
     30,
   );
 
+  const materialOptions = {
+    map: texture,
+    ...config.materialOptions,
+  }
   const material =
     config.material === 'basic'
-      ? new THREE.MeshBasicMaterial({ map: texture })
-      : new THREE.MeshStandardMaterial({ map: texture });
+      ? new THREE.MeshBasicMaterial(materialOptions)
+      : new THREE.MeshStandardMaterial(materialOptions);
 
   const mesh = new THREE.Mesh(geometry, material);
 
@@ -316,12 +410,19 @@ async function initialize() {
   }
 }
 
+const pickHelper = new PickHelper();
+const pickableObjects = Object.values(meshes).filter(
+  (mesh) => mesh.material.emissive,
+);
+
 // animation loop
-function animate() {
+function animate(time) {
   // rotate the sun
   // sun.rotation.y = time / 5000;
+  time *= 0.001; // convert time to seconds
 
   controls.update();
+  pickHelper.pick(pickPosition, pickableObjects, camera, time);
   renderer.render(scene, camera);
 }
 
@@ -332,6 +433,29 @@ sceneCanvas.addEventListener('mouseup', () => {
   sceneCanvas.classList.remove('grabbing');
 });
 window.addEventListener('resize', resizeScene);
+
+if (idBox) {
+  document.addEventListener('mousemove', (event) => {
+    idBox.style.top = `${event.clientY}px`;
+    idBox.style.left = `${event.clientX}px`;
+  });
+
+  window.addEventListener('mousemove', setPickPosition);
+  window.addEventListener('mouseout', clearPickPosition);
+  window.addEventListener('mouseleave', clearPickPosition);
+
+  // mobile
+  window.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    setPickPosition(event.touches[0]);
+  }, {passive: false});
+
+  window.addEventListener('touchmove', (event) => {
+    setPickPosition(event.touches[0]);
+  });
+
+  window.addEventListener('touchend', clearPickPosition);
+}
 
 const minimumSplashTime = new Promise((resolve) => {
   setTimeout(resolve, 4000);

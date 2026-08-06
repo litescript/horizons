@@ -133,3 +133,20 @@ h1 {
     top: 64%;
   }
 }
+
+#id-box {
+  position: fixed;
+  display: block;
+  top: 0px;
+  left: 0px;
+  width: 600px;
+  height: 200px;
+  border: solid 1px #189ad3;
+  border-radius: 10px;
+
+  background: rgba(80, 80, 80, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  padding: 20px;
+}
