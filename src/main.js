@@ -18,6 +18,22 @@ sceneCanvas.height = window.innerHeight;
 const aspectRatio = sceneCanvas.width / sceneCanvas.height;
 const bodies = {};
 const meshes = {};
+const orbits = {};
+const scaleFactor = 50;
+
+// BIG DEFINED CONSTANTS!! ---------------------------------
+const ORBITAL_ELEMENTS = {
+  // a = semi-major axis, e = eccentricity, i = inclination,
+  // O = longitude of ascending node, w = longitude of perihelion
+  Mercury: { a: 0.3871, e: 0.2056, i: 7.005, O: 48.331, w: 29.124 },
+  Venus:   { a: 0.7233, e: 0.0068, i: 3.395, O: 76.680, w: 54.884 },
+  Earth:   { a: 1.0000, e: 0.0167, i: 0.000, O: 0.000,  w: 102.947 },
+  Mars:    { a: 1.5237, e: 0.0934, i: 1.850, O: 49.578, w: 286.502 },
+  Jupiter: { a: 5.2028, e: 0.0484, i: 1.303, O: 100.464,w: 273.867 },
+  Saturn:  { a: 9.5388, e: 0.0541, i: 2.489, O: 113.666,w: 339.392 },
+  Uranus:  { a: 19.1914,e: 0.0473, i: 0.773, O: 74.006, w: 98.999 },
+  Neptune: { a: 30.0611,e: 0.0086, i: 1.770, O: 131.784,w: 276.340 }
+};
 
 const bodyConfig = {
   Sun: {
@@ -79,6 +95,7 @@ const bodyConfig = {
     material: 'standard',
   },
 }
+// ---------------------------------------------------------
 
 // basic scene setup
 const scene = new THREE.Scene();
@@ -142,6 +159,60 @@ async function createBodyMesh(body) {
   return mesh;
 }
 
+async function drawOrbitPaths(body) {
+  const elements = ORBITAL_ELEMENTS[body.name];
+  if (!elements) return null;
+
+  // calculate unscaled physical radii in AU
+  const aRaw = elements.a;
+  const e = elements.e;
+  const bRaw = aRaw * Math.sqrt(1 - (e * e));
+  const cRaw = aRaw * e;   // distance from center to focus (sun)
+
+  // pass same distances through our same scale function
+  const a = Math.log1p(aRaw) * scaleFactor;
+  const b = Math.log1p(bRaw) * scaleFactor;
+  const c = Math.log1p(cRaw) * scaleFactor;
+
+  // derive angles in radians
+  const argumentOfPeriapsisRad = ((elements.w - elements.O) * Math.PI) / 180;
+  const inclinationRad = (elements.i * Math.PI) / 180;
+  const ascendingNodeRad = (elements.O * Math.PI) / 180;
+
+  // construct the 2D flat ellipse
+  const curve = new THREE.EllipseCurve(
+    -c, 0,                  // shift center left so Sun rests at 0, 0
+    a, b,                   // scaled dimensions
+    0, 2 * Math.PI,         // complete loop
+    false,                  // counter-clockwise
+    argumentOfPeriapsisRad  // flat orbital direction
+  );
+
+  // generate 2D points (drawn falt on X and Y)
+  const points2D = curve.getPoints(128);
+
+  // map to 3d space and swap Y and Z for Three.js
+  const points3D = points2D.map(p => {
+    return new THREE.Vector3(p.x, 0, p.y);
+  });
+
+  // apply the 3D inclination rotations
+  const euler = new THREE.Euler(inclinationRad, 0, ascendingNodeRad, 'YXZ');
+  points3D.forEach(v => v.applyEuler(euler));
+
+  // build the line Mesh
+  const geometry = new THREE.BufferGeometry().setFromPoints(points3D);
+
+  const config = bodyConfig[body.name];
+  const material = new THREE.LineBasicMaterial({
+    color: config ? config.orbitColor || 0xffffff : 0xffffff,
+    transparent: true,
+    opacity: 0.3
+  });
+
+  return new THREE.LineLoop(geometry, material);
+}
+
 camera.position.z = 40;
 
 function resizeScene() {
@@ -154,7 +225,6 @@ function resizeScene() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height, false);
 }
-
 
 function scalePosition(position) {
   const vector = new THREE.Vector3(
@@ -169,7 +239,7 @@ function scalePosition(position) {
     return vector;
   }
 
-  const scaledDistance = Math.log1p(distance) * 50;
+  const scaledDistance = Math.log1p(distance) * scaleFactor;
 
   return vector.normalize().multiplyScalar(scaledDistance);
 }
@@ -185,7 +255,7 @@ async function loadData() {
   }
 
   if (!dsnResponse.ok) {
-    throw new Error(`Solar system request failed: ${dsnResponse.status}`);
+    throw new Error(`DSN request failed: ${dsnResponse.status}`);
   }
 
   const [solarSystem, dsn] = await Promise.all([
@@ -206,11 +276,16 @@ async function initialize() {
     if (solarSystem && dsn) {
       for (const body of solarSystem.bodies) {
         bodies[body.name] = body;
+
         const mesh = await createBodyMesh(body);
         mesh.position.copy(scalePosition(body.position));
 
+        const orbit = await drawOrbitPaths(body);
+
         meshes[body.name] = mesh;
+        orbits[body.name] = orbit;
         scene.add(mesh);
+        scene.add(orbit);
       }
 
       const celestialBodies = Object.values(bodies);
@@ -220,6 +295,7 @@ async function initialize() {
       const maxBoundary = Math.max(maxX, maxY, maxZ);
       console.log(maxBoundary);
 
+      console.log(bodies);
       resizeScene();
       renderer.setAnimationLoop(animate);
     }
