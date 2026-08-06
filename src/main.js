@@ -355,8 +355,8 @@ requestAnimationFrame(() => {
   underConstruction.classList.add('bottom');
 });
 
-// setTimeout(() => {
-//   splashScreen.style.display = 'none';
-//   underConstruction.style.display = 'grid';
-// }, 400);
+setTimeout(() => {
+  splashScreen.style.display = 'none';
+  underConstruction.style.display = 'grid';
+}, 400);
 
