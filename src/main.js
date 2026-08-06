@@ -322,7 +322,7 @@ async function initialize() {
 }
 
 // animation loop
-function animate(time=null) {
+function animate() {
   // rotate the sun
   // sun.rotation.y = time / 5000;
 
