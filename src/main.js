@@ -7,6 +7,7 @@ console.log('Horizons initialized.');
 // variables, DOM
 const sceneCanvas = document.getElementById('scene-canvas');
 const splashScreen = document.getElementById('splash');
+const underConstruction = document.getElementById('under-construction');
 sceneCanvas.width = window.innerWidth;
 sceneCanvas.height = window.innerHeight;
 const aspectRatio = sceneCanvas.width / sceneCanvas.height;
@@ -351,9 +352,11 @@ await Promise.all([
 requestAnimationFrame(() => {
   splashScreen.classList.add('is-hidden');
   sceneCanvas.classList.add('is-visible');
+  underConstruction.classList.add('bottom');
 });
 
-setTimeout(() => {
-  splashScreen.style.display = 'none';
-}, 400);
+// setTimeout(() => {
+//   splashScreen.style.display = 'none';
+//   underConstruction.style.display = 'grid';
+// }, 400);
 
