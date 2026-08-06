@@ -341,7 +341,7 @@ sceneCanvas.addEventListener('mouseup', () => {
 window.addEventListener('resize', resizeScene);
 
 const minimumSplashTime = new Promise((resolve) => {
-  setTimeout(resolve, 3000);
+  setTimeout(resolve, 4000);
 });
 
 await Promise.all([
