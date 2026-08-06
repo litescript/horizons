@@ -99,6 +99,8 @@ h1 {
 #splash {
   opacity: 1;
   transition: opacity 400ms ease-out;
+  position: relative;
+  z-index: 2;
 }
 
 #splash.is-hidden {
