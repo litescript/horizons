@@ -325,13 +325,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// if (isDev) {
-//   splashScreen.style.display = 'none';
-//   sceneCanvas.style.display = 'block';
-//   sceneCanvas.style.zIndex = 1;
-//   sceneCanvas.style.visibility = 'visible';
-// }
-
 sceneCanvas.addEventListener('mousedown', () => {
   sceneCanvas.classList.add('grabbing');
 });
