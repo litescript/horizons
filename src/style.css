@@ -84,3 +84,7 @@ h1 {
   height: 100%;
   cursor: grab;
 }
+
+#scene-canvas.grabbing {
+  cursor: grabbing;
+}

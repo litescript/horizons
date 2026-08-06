@@ -337,5 +337,11 @@ if (isDev) {
   sceneCanvas.style.visibility = 'visible';
 }
 
+sceneCanvas.addEventListener('mousedown', () => {
+  sceneCanvas.classList.add('grabbing');
+});
+sceneCanvas.addEventListener('mouseup', () => {
+  sceneCanvas.classList.remove('grabbing');
+});
 window.addEventListener('resize', resizeScene);
 initialize();
