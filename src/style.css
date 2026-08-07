@@ -145,8 +145,8 @@ h1 {
   border-radius: 10px;
 
   background: rgba(80, 80, 80, 0.2);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 
   align-items: center;
   justify-content: center;
