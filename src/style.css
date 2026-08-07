@@ -136,11 +136,11 @@ h1 {
 
 #id-box {
   position: fixed;
-  display: block;
+  display: flex;
   top: 0px;
   left: 0px;
-  width: 600px;
-  height: 200px;
+  width: 200px;
+  height: 50px;
   border: solid 1px #189ad3;
   border-radius: 10px;
 
@@ -148,5 +148,6 @@ h1 {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 
-  padding: 20px;
+  align-items: center;
+  justify-content: center;
 }
