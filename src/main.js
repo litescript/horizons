@@ -22,10 +22,12 @@ const scaleFactor = 50;
 const pickHelper = new PickHelper((object) => {
   if (!object) {
     idBox.textContent = '';
+    idBox.style.visibility = 'hidden';
     return;
   }
 
   idBox.textContent = object.name;
+  idBox.style.visibility = 'visible';
 });
 
 // basic scene setup
