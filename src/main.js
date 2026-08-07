@@ -19,7 +19,14 @@ const meshes = {};
 const orbits = {};
 const scaleFactor = 50;
 
-const pickHelper = new PickHelper();
+const pickHelper = new PickHelper((object) => {
+  if (!object) {
+    idBox.textContent = '';
+    return;
+  }
+
+  idBox.textContent = object.name;
+});
 
 // basic scene setup
 const scene = new THREE.Scene();
@@ -99,12 +106,15 @@ async function createBodyMesh(body) {
     map: texture,
     ...config.materialOptions,
   }
+
   const material =
     config.material === 'basic'
       ? new THREE.MeshBasicMaterial(materialOptions)
       : new THREE.MeshStandardMaterial(materialOptions);
 
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = body.name;
+  mesh.userData.body = body;
 
   return mesh;
 }
@@ -295,8 +305,8 @@ window.addEventListener('resize', resizeScene);
 
 if (idBox) {
   document.addEventListener('mousemove', (event) => {
-    idBox.style.top = `${event.clientY}px`;
-    idBox.style.left = `${event.clientX}px`;
+    idBox.style.top = `${event.clientY + 50}px`;
+    idBox.style.left = `${event.clientX + 50}px`;
   });
 
   window.addEventListener('mousemove', setPickPosition);
