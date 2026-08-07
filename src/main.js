@@ -29,7 +29,7 @@ const pickHelper = new PickHelper((object) => {
 
   idBox.textContent = object.name;
   idBox.style.visibility = 'visible';
-    idBox.style.zIndex = '4';
+  idBox.style.zIndex = '4';
 });
 
 // basic scene setup
