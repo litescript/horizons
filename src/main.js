@@ -120,13 +120,19 @@ class PickHelper {
     this.raycaster = new THREE.Raycaster();
     this.pickedObject = null;
     this.pickedObjectSavedColor = 0;
+    this.pickedObjectOriginalScale = null;
   }
   pick(normalizedPosition, pickableObjects, camera) {
-    // restore the color if there is a picked object
-    if (this.pickedObject?.material.emissive) {
-      this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
+    if (this.pickedObject) {
+      if (this.pickedObject.material.emissive) {
+        this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
+      }
+      if (this.pickedObjectOriginalScale) {
+        this.pickedObject.scale.copy(this.pickedObjectOriginalScale);
+      }
     }
 
+    this.pickedObject = null;
     this.pickedObject = null;
 
     // cast a ray through the frustrum
@@ -140,20 +146,22 @@ class PickHelper {
 
     const object = intersectedObjects[0].object;
 
-    if (!object.material.emissive) {
-      return;
-    }
+    // if (!object.material.emissive) {
+    //   return;
+    // }
 
     this.pickedObject = object;
-    this.pickedObjectSavedColor =
-      object.material.emissive.getHex();
+    this.pickedObjectOriginalScale = object.scale.clone();
 
     if (object.material.emissive) {
-      object.material.emissive.setHex(0x0000ff);
+      this.pickedObjectSavedColor =
+        object.material.emissive.getHex();
+      object.material.emissive.setHex(0x00ff00);
     } else {
-      object.scale.setScalar(1.1);
+      object.scale.setScalar(2.0);
     }
 
+    console.log(this.pickedObject);
   }
 }
 
@@ -411,18 +419,18 @@ async function initialize() {
 }
 
 const pickHelper = new PickHelper();
-const pickableObjects = Object.values(meshes).filter(
-  (mesh) => mesh.material.emissive,
-);
 
 // animation loop
-function animate(time) {
+function animate() {
   // rotate the sun
   // sun.rotation.y = time / 5000;
-  time *= 0.001; // convert time to seconds
 
   controls.update();
-  pickHelper.pick(pickPosition, pickableObjects, camera, time);
+  pickHelper.pick(
+    pickPosition,
+    Object.values(meshes),
+    camera,
+  );
   renderer.render(scene, camera);
 }
 
