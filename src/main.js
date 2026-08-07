@@ -23,11 +23,13 @@ const pickHelper = new PickHelper((object) => {
   if (!object) {
     idBox.textContent = '';
     idBox.style.visibility = 'hidden';
+    idBox.style.zIndex = '-1';
     return;
   }
 
   idBox.textContent = object.name;
   idBox.style.visibility = 'visible';
+    idBox.style.zIndex = '4';
 });
 
 // basic scene setup
