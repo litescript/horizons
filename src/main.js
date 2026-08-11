@@ -18,6 +18,7 @@ const bodies = {};
 const meshes = {};
 const orbits = {};
 const scaleFactor = 50;
+let sceneInteractive = false;
 
 const pickHelper = new PickHelper((object) => {
   if (!object) {
@@ -290,21 +291,25 @@ function animate() {
   // rotate the sun
   // sun.rotation.y = time / 5000;
 
-  controls.update();
-  pickHelper.pick(
-    pickPosition,
-    Object.values(meshes),
-    camera,
-  );
+  if (sceneInteractive) {
+    controls.update();
+    pickHelper.pick(
+      pickPosition,
+      Object.values(meshes),
+      camera,
+    );
+  }
   renderer.render(scene, camera);
 }
 
+// ------------------ LISTENERS --------------------
 sceneCanvas.addEventListener('mousedown', () => {
   sceneCanvas.classList.add('grabbing');
 });
 sceneCanvas.addEventListener('mouseup', () => {
   sceneCanvas.classList.remove('grabbing');
 });
+
 window.addEventListener('resize', resizeScene);
 
 if (idBox) {
@@ -329,7 +334,9 @@ if (idBox) {
 
   window.addEventListener('touchend', clearPickPosition);
 }
+// -------------------------------------------------
 
+// ---------------- SPLASH HANDLING ----------------
 const minimumSplashTime = new Promise((resolve) => {
   setTimeout(resolve, 4000);
 });
@@ -348,5 +355,7 @@ requestAnimationFrame(() => {
 setTimeout(() => {
   splashScreen.style.display = 'none';
   underConstruction.style.display = 'grid';
+  sceneInteractive = true;
 }, 400);
+// -------------------------------------------------
 
