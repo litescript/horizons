@@ -20,6 +20,9 @@ body {
     Inter,
     system-ui,
     sans-serif;
+
+  user-select: none;
+  overflow: hidden;
 }
 
 main {
