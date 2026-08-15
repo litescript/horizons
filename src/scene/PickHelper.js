@@ -6,8 +6,7 @@ export class PickHelper {
   constructor(onPickChange) {
     this.raycaster = new THREE.Raycaster();
     this.pickedObject = null;
-    this.pickedObjectSavedColor = 0;
-    this.pickedObjectOriginalScale = null;
+    this.halo = null;
     this.onPickChange = onPickChange;
   }
   pick(normalizedPosition, pickableObjects, camera) {
@@ -21,7 +20,7 @@ export class PickHelper {
         ? intersectedObjects[0].object
         : null;
 
-    if (object === this.PickedObject) {
+    if (object === this.pickedObject) {
       return;
     }
 
@@ -34,33 +33,39 @@ export class PickHelper {
       return;
     }
 
-    this.pickedObjectOriginalScale = object.scale.clone();
-
-    if (object.material.emissive) {
-      this.pickedObjectSavedColor =
-        object.material.emissive.getHex();
-
-      object.material.emissive.setHex(0x00ff00);
-    }
+    this.applyPickedEffect(object);
     this.onPickChange?.(object);
   }
 
+  applyPickedEffect(object) {
+    const haloMaterial = new THREE.MeshBasicMaterial({
+      color: 0x189ad3,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+
+    this.halo = new THREE.Mesh(
+      object.geometry,
+      haloMaterial,
+    );
+
+    this.halo.scale.setScalar(1.10);
+
+    object.add(this.halo);
+  }
+
   restorePickedObject() {
-    if (!this.pickedObject) {
+    if (!this.halo) {
       return;
     }
 
-    if (this.pickedObject.material.emissive) {
-      this.pickedObject.material.emissive.setHex(
-        this.pickedObjectSavedColor,
-      );
-    }
+    this.halo.removeFromParent();
+    this.halo.material.dispose();
 
-    if (this.pickedObjectOriginalScale) {
-      this.pickedObject.scale.copy(
-        this.pickedObjectOriginalScale,
-      );
-    }
+    this.halo = null;
   }
 }
 
