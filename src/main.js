@@ -5,6 +5,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { PickHelper } from './scene/PickHelper.js';
 import { ORBITAL_ELEMENTS, bodyConfig } from './scene/Constants.js';
 
@@ -56,6 +57,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 
+const smaaPass = new SMAAPass();
+
 const BLOOM_LAYER = 1;
 const MASK_LAYER = 2;
 
@@ -84,6 +87,14 @@ const bloomComposer = new EffectComposer(renderer);
 bloomComposer.renderToScreen = false;
 bloomComposer.addPass(bloomRenderPass);
 bloomComposer.addPass(bloomPass);
+
+const renderTarget = new THREE.WebGLRenderTarget(
+  window.innerWidth,
+  window.innerHeight,
+  {
+    samples: 12,
+  }
+);
 
 const mixPass = new ShaderPass(
   new THREE.ShaderMaterial({
@@ -135,10 +146,14 @@ const mixPass = new ShaderPass(
 
 const outputPass = new OutputPass();
 
-const finalComposer = new EffectComposer(renderer);
+const finalComposer = new EffectComposer(
+  renderer,
+  renderTarget,
+);
 
 finalComposer.addPass(finalRenderPass);
 finalComposer.addPass(mixPass);
+finalComposer.addPass(smaaPass);
 finalComposer.addPass(outputPass);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -148,7 +163,10 @@ controls.dampingFactor = 0.05;
 controls.target.set(0, 0, 0);
 controls.update();
 
-const ambientLight = new THREE.AmbientLight(0x223344, 0.15);
+const ambientLight = new THREE.AmbientLight(
+  0x223344,
+  0.45,
+);
 scene.add(ambientLight);
 
 const sunLight = new THREE.PointLight(
@@ -196,8 +214,8 @@ async function createBodyMesh(body) {
 
   const geometry = new THREE.SphereGeometry(
     config.radius,
-    40,
-    30,
+    96,
+    64,
   );
 
   const materialOptions = {
@@ -290,14 +308,17 @@ camera.position.z = 40;
 function resizeScene() {
   const width = sceneCanvas.clientWidth;
   const height = sceneCanvas.clientHeight;
+  const pixelRatio = Math.min(window.devicePixelRatio, 2);
 
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 
-  renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, 2)
-  );
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(width, height, false);
+
+  bloomComposer.setPixelRatio(pixelRatio);
+  maskComposer.setPixelRatio(pixelRatio);
+  finalComposer.setPixelRatio(pixelRatio);
 
   bloomComposer.setSize(width, height);
   maskComposer.setSize(width, height);
