@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { PickHelper } from './scene/PickHelper.js';
 import { ORBITAL_ELEMENTS, bodyConfig } from './scene/Constants.js';
 
@@ -55,22 +56,90 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 
-const composer = new EffectComposer(renderer);
+const BLOOM_LAYER = 1;
+const MASK_LAYER = 2;
 
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
+const bloomRenderPass = new RenderPass(scene, camera);
+const finalRenderPass = new RenderPass(scene, camera);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  2.0,    // strength
-  0.8,    // radius
+  0.8,    // strength
+  0.5,   // radius
   0.0,    // threshold
 );
 
-composer.addPass(bloomPass);
+const maskMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  toneMapped: false,
+});
+
+const maskRenderPass = new RenderPass(scene, camera);
+
+const maskComposer = new EffectComposer(renderer);
+maskComposer.renderToScreen = false;
+maskComposer.addPass(maskRenderPass);
+
+const bloomComposer = new EffectComposer(renderer);
+bloomComposer.renderToScreen = false;
+bloomComposer.addPass(bloomRenderPass);
+bloomComposer.addPass(bloomPass);
+
+const mixPass = new ShaderPass(
+  new THREE.ShaderMaterial({
+    uniforms: {
+      baseTexture: { value: null },
+
+      bloomTexture: {
+        value: bloomComposer.renderTarget2.texture,
+      },
+
+      maskTexture: {
+        value: maskComposer.renderTarget2.texture,
+      },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+
+        gl_Position =
+          projectionMatrix *
+          modelViewMatrix *
+          vec4(position, 1.0);
+      }
+    `,
+
+    fragmentShader: `
+      uniform sampler2D baseTexture;
+      uniform sampler2D bloomTexture;
+      uniform sampler2D maskTexture;
+
+      varying vec2 vUv;
+
+      void main() {
+        vec4 base = texture2D(baseTexture, vUv);
+        vec4 bloom = texture2D(bloomTexture, vUv);
+        vec4 mask = texture2D(maskTexture, vUv);
+
+        float outsideObject = 1.0 - mask.r;
+
+        gl_FragColor = base + bloom * outsideObject;
+      }
+    `,
+  }),
+
+  'baseTexture',
+);
 
 const outputPass = new OutputPass();
-composer.addPass(outputPass);
+
+const finalComposer = new EffectComposer(renderer);
+
+finalComposer.addPass(finalRenderPass);
+finalComposer.addPass(mixPass);
+finalComposer.addPass(outputPass);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
@@ -219,15 +288,20 @@ async function drawOrbitPaths(body) {
 camera.position.z = 40;
 
 function resizeScene() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const width = sceneCanvas.clientWidth;
+  const height = sceneCanvas.clientHeight;
 
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 2)
+  );
   renderer.setSize(width, height, false);
-  composer.setSize(width, height);
+
+  bloomComposer.setSize(width, height);
+  maskComposer.setSize(width, height);
+  finalComposer.setSize(width, height);
 }
 
 function scalePosition(position) {
@@ -313,18 +387,30 @@ async function initialize() {
 
 // animation loop
 function animate() {
-  // rotate the sun
-  // sun.rotation.y = time / 5000;
-
   if (sceneInteractive) {
     controls.update();
+
     pickHelper.pick(
       pickPosition,
       Object.values(meshes),
       camera,
     );
   }
-  composer.render();
+
+  // render halo only into bloom texture
+  camera.layers.set(BLOOM_LAYER);
+  bloomComposer.render();
+
+  // render selected object's silhouette into mask texture
+  camera.layers.set(MASK_LAYER);
+
+  scene.overrideMaterial = maskMaterial;
+  maskComposer.render();
+  scene.overrideMaterial = null;
+
+  // render normal scene
+  camera.layers.set(0);
+  finalComposer.render();
 }
 
 // ------------------ LISTENERS --------------------
@@ -336,6 +422,10 @@ sceneCanvas.addEventListener('mouseup', () => {
 });
 
 window.addEventListener('resize', resizeScene);
+const resizeObserver = new ResizeObserver(() => {
+  resizeScene();
+});
+resizeObserver.observe(sceneCanvas);
 
 if (idBox) {
   document.addEventListener('mousemove', (event) => {

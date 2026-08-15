@@ -39,7 +39,7 @@ export class PickHelper {
 
   applyPickedEffect(object) {
     const haloMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x189ad3).multiplyScalar(3),
+      color: 0x189ad3,
       transparent: true,
       opacity: 0.8,
       blending: THREE.AdditiveBlending,
@@ -53,19 +53,25 @@ export class PickHelper {
       haloMaterial,
     );
 
-    this.halo.scale.setScalar(1.025);
+    this.halo.scale.setScalar(1.015);
+    this.halo.layers.set(1);
+
+    object.layers.enable(2);
 
     object.add(this.halo);
   }
 
   restorePickedObject() {
+    if (this.pickedObject) {
+      this.pickedObject.layers.disable(2);
+    }
+
     if (!this.halo) {
       return;
     }
 
     this.halo.removeFromParent();
     this.halo.material.dispose();
-
     this.halo = null;
   }
 }
