@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { PickHelper } from './scene/PickHelper.js';
 import { ORBITAL_ELEMENTS, bodyConfig } from './scene/Constants.js';
 
@@ -47,6 +51,26 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+
+const composer = new EffectComposer(renderer);
+
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  2.0,    // strength
+  0.8,    // radius
+  0.0,    // threshold
+);
+
+composer.addPass(bloomPass);
+
+const outputPass = new OutputPass();
+composer.addPass(outputPass);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
@@ -203,6 +227,7 @@ function resizeScene() {
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(width, height, false);
+  composer.setSize(width, height);
 }
 
 function scalePosition(position) {
@@ -299,7 +324,7 @@ function animate() {
       camera,
     );
   }
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 // ------------------ LISTENERS --------------------

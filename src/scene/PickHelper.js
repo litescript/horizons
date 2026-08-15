@@ -39,12 +39,13 @@ export class PickHelper {
 
   applyPickedEffect(object) {
     const haloMaterial = new THREE.MeshBasicMaterial({
-      color: 0x189ad3,
+      color: new THREE.Color(0x189ad3).multiplyScalar(3),
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.8,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
       depthWrite: false,
+      toneMapped: false,
     });
 
     this.halo = new THREE.Mesh(
@@ -52,7 +53,7 @@ export class PickHelper {
       haloMaterial,
     );
 
-    this.halo.scale.setScalar(1.10);
+    this.halo.scale.setScalar(1.025);
 
     object.add(this.halo);
   }
