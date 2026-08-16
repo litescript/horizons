@@ -24,7 +24,8 @@ const bodies = {};
 const meshes = {};
 const orbits = {};
 const scaleFactor = 50;
-const CAMERA_FLIGHT_DURATION = 1200;
+const CAMERA_FLIGHT_BASE_DURATION = 900;
+const CAMERA_FLIGHT_DISTANCE_FACTOR = 180;
 const CLICK_DRAG_THRESHOLD = 6;
 let sceneInteractive = false;
 let cameraFlight = null;
@@ -213,6 +214,9 @@ function flyToObject(object) {
   const targetPosition = new THREE.Vector3();
   object.getWorldPosition(targetPosition);
 
+  const travelDistance = controls.target.distanceTo(targetPosition);
+  const duration = CAMERA_FLIGHT_BASE_DURATION + Math.log1p(travelDistance) * CAMERA_FLIGHT_DISTANCE_FACTOR;
+
   // preserve current viewing angle/distance
   const cameraOffset = camera.position
     .clone()
@@ -220,7 +224,7 @@ function flyToObject(object) {
 
   cameraFlight = {
     startTime: performance.now(),
-    duration: CAMERA_FLIGHT_DURATION,
+    duration,
 
     cameraStart: camera.position.clone(),
     cameraEnd: targetPosition.clone().add(cameraOffset),
