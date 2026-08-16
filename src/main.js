@@ -24,7 +24,11 @@ const bodies = {};
 const meshes = {};
 const orbits = {};
 const scaleFactor = 50;
+const CAMERA_FLIGHT_DURATION = 1200;
+const CLICK_DRAG_THRESHOLD = 6;
 let sceneInteractive = false;
+let cameraFlight = null;
+let pointerDownPosition = null;
 
 const pickHelper = new PickHelper((object) => {
   if (!object) {
@@ -129,6 +133,12 @@ const mixPass = new ShaderPass(
 
       varying vec2 vUv;
 
+      float random(vec2 p) {
+        return fract(
+          sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453
+        );
+      }
+
       void main() {
         vec4 base = texture2D(baseTexture, vUv);
         vec4 bloom = texture2D(bloomTexture, vUv);
@@ -136,7 +146,14 @@ const mixPass = new ShaderPass(
 
         float outsideObject = 1.0 - mask.r;
 
-        gl_FragColor = base + bloom * outsideObject;
+        vec4 color = base + bloom * outsideObject;
+
+        float noise =
+          (random(gl_FragCoord.xy) - 0.5) / 255.0;
+
+        color.rgb += noise;
+
+        gl_FragColor = color;
       }
     `,
   }),
@@ -183,6 +200,67 @@ const textureLoader = new THREE.TextureLoader();
 
 const pickPosition = {x: 0, y: 0};
 clearPickPosition();
+
+
+// HELPER FUNCTIONS
+function easeInOutCubic(t) {
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function flyToObject(object) {
+  const targetPosition = new THREE.Vector3();
+  object.getWorldPosition(targetPosition);
+
+  // preserve current viewing angle/distance
+  const cameraOffset = camera.position
+    .clone()
+    .sub(controls.target);
+
+  cameraFlight = {
+    startTime: performance.now(),
+    duration: CAMERA_FLIGHT_DURATION,
+
+    cameraStart: camera.position.clone(),
+    cameraEnd: targetPosition.clone().add(cameraOffset),
+
+    targetStart: controls.target.clone(),
+    targetEnd: targetPosition.clone(),
+  }
+}
+
+function updateCameraFlight(time) {
+  if (!cameraFlight) {
+    return;
+  }
+
+  const elapsed = time - cameraFlight.startTime;
+
+  const progress = Math.min(
+    elapsed / cameraFlight.duration,
+    1,
+  );
+
+  const eased = easeInOutCubic(progress);
+
+  camera.position.lerpVectors(
+    cameraFlight.cameraStart,
+    cameraFlight.cameraEnd,
+    eased,
+  );
+
+  controls.target.lerpVectors(
+    cameraFlight.targetStart,
+    cameraFlight.targetEnd,
+    eased,
+  );
+
+  if (progress >= 1) {
+    cameraFlight = null;
+    controls.enabled = true;
+  }
+}
 
 function getsceneCanvasRelativePosition(event) {
   const rect = sceneCanvas.getBoundingClientRect();
@@ -407,9 +485,13 @@ async function initialize() {
 }
 
 // animation loop
-function animate() {
+function animate(time) {
   if (sceneInteractive) {
-    controls.update();
+    if (cameraFlight) {
+      updateCameraFlight(time);
+    } else {
+      controls.update();
+    }
 
     pickHelper.pick(
       pickPosition,
@@ -440,6 +522,50 @@ sceneCanvas.addEventListener('mousedown', () => {
 });
 sceneCanvas.addEventListener('mouseup', () => {
   sceneCanvas.classList.remove('grabbing');
+});
+
+sceneCanvas.addEventListener('pointerdown', (event) => {
+  pointerDownPosition = {
+    x: event.clientX,
+    y: event.clientY,
+  };
+});
+
+sceneCanvas.addEventListener('pointerup', (event) => {
+  if (!pointerDownPosition) {
+    return;
+  }
+
+  const dx = event.clientX - pointerDownPosition.x;
+  const dy = event.clientY - pointerDownPosition.y;
+
+  pointerDownPosition = null;
+
+  const distance = Math.hypot(dx, dy);
+
+  // check again event being an orbit controls drag, not click/tap
+  if (distance > CLICK_DRAG_THRESHOLD) {
+    return;
+  }
+
+  // ensure the raycaster is using the pointer-up location
+  setPickPosition(event);
+
+  pickHelper.pick(
+    pickPosition,
+    Object.values(meshes),
+    camera,
+  );
+
+  if (!pickHelper.pickedObject) {
+    return;
+  }
+
+  flyToObject(pickHelper.pickedObject);
+});
+
+sceneCanvas.addEventListener('pointercancel', () => {
+  pointerDownPosition = null;
 });
 
 window.addEventListener('resize', resizeScene);
