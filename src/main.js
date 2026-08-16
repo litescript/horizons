@@ -35,6 +35,9 @@ let pointerDownPosition = null;
 
 // basic scene setup
 const scene = new THREE.Scene();
+const textureLoader = new THREE.TextureLoader();
+const smaaPass = new SMAAPass();
+const outputPass = new OutputPass();
 
 const camera = new THREE.PerspectiveCamera (
   50,             // FOV (def: 45)
@@ -42,10 +45,6 @@ const camera = new THREE.PerspectiveCamera (
   0.1,            // near plane (def: 0.1)
   2000,           // far plane (def: 2000)
 );
-
-const textureLoader = new THREE.TextureLoader();
-const smaaPass = new SMAAPass();
-const outputPass = new OutputPass();
 
 const renderer = new THREE.WebGLRenderer({
   canvas: sceneCanvas,
@@ -57,6 +56,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 
+// instantiate the PickHelper, attach the idBox to it
 const pickHelper = new PickHelper((object) => {
   if (!object) {
     idBox.textContent = '';
@@ -70,14 +70,15 @@ const pickHelper = new PickHelper((object) => {
   idBox.style.zIndex = '4';
 });
 
+// halo effect stuff
 const bloomRenderPass = new RenderPass(scene, camera);
 const finalRenderPass = new RenderPass(scene, camera);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.8,    // strength
-  0.5,   // radius
-  0.0,    // threshold
+  0.8,  // strength
+  0.5,  // radius
+  0.0,  // threshold
 );
 
 const maskMaterial = new THREE.MeshBasicMaterial({
@@ -175,7 +176,7 @@ finalComposer.addPass(mixPass);
 finalComposer.addPass(smaaPass);
 finalComposer.addPass(outputPass);
 
-// orbit controls
+// orbit controls (Three.js orbit controls, not planetary orbits)
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -195,7 +196,6 @@ const sunLight = new THREE.PointLight(
   0,
   2,
 );
-
 sunLight.position.set(0, 0, 0);
 scene.add(sunLight);
 
@@ -211,7 +211,10 @@ function flyToObject(object) {
   object.getWorldPosition(targetPosition);
 
   const travelDistance = controls.target.distanceTo(targetPosition);
-  const duration = CAMERA_FLIGHT_BASE_DURATION + Math.log1p(travelDistance) * CAMERA_FLIGHT_DISTANCE_FACTOR;
+  const duration =
+    CAMERA_FLIGHT_BASE_DURATION +
+      Math.log1p(travelDistance) *
+      CAMERA_FLIGHT_DISTANCE_FACTOR;
 
   // preserve current viewing angle/distance
   const cameraOffset = camera.position
@@ -380,7 +383,6 @@ async function drawOrbitPaths(body) {
 
   return new THREE.LineLoop(geometry, material);
 }
-
 
 function resizeScene() {
   const width = sceneCanvas.clientWidth;
