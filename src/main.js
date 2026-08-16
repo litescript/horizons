@@ -9,8 +9,6 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { PickHelper } from './scene/PickHelper.js';
 import { ORBITAL_ELEMENTS, bodyConfig } from './scene/Constants.js';
 
-// oh, hello
-console.log('Horizons initialized.');
 
 // variables, DOM
 const sceneCanvas = document.getElementById('scene-canvas');
@@ -23,6 +21,7 @@ const aspectRatio = sceneCanvas.width / sceneCanvas.height;
 const bodies = {};
 const meshes = {};
 const orbits = {};
+const pickPosition = {x: 0, y: 0};
 const scaleFactor = 50;
 const CAMERA_FLIGHT_BASE_DURATION = 900;
 const CAMERA_FLIGHT_DISTANCE_FACTOR = 180;
@@ -30,6 +29,25 @@ const CLICK_DRAG_THRESHOLD = 6;
 let sceneInteractive = false;
 let cameraFlight = null;
 let pointerDownPosition = null;
+
+// basic scene setup
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera (
+  50,             // FOV (def: 45)
+  aspectRatio,    // aspect ratio
+  0.1,            // near plane (def: 0.1)
+  2000,           // far plane (def: 2000)
+);
+const textureLoader = new THREE.TextureLoader();
+const renderer = new THREE.WebGLRenderer({
+  canvas: sceneCanvas,
+  antialias: true,
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
 
 const pickHelper = new PickHelper((object) => {
   if (!object) {
@@ -43,24 +61,6 @@ const pickHelper = new PickHelper((object) => {
   idBox.style.visibility = 'visible';
   idBox.style.zIndex = '4';
 });
-
-// basic scene setup
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera (
-  50,             // FOV (def: 45)
-  aspectRatio,    // aspect ratio
-  0.1,            // near plane (def: 0.1)
-  2000,           // far plane (def: 2000)
-);
-const renderer = new THREE.WebGLRenderer({
-  canvas: sceneCanvas,
-  antialias: true,
-});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
 
 const smaaPass = new SMAAPass();
 
@@ -174,13 +174,14 @@ finalComposer.addPass(mixPass);
 finalComposer.addPass(smaaPass);
 finalComposer.addPass(outputPass);
 
+// orbit controls
 const controls = new OrbitControls(camera, renderer.domElement);
-
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.target.set(0, 0, 0);
 controls.update();
 
+// lighting
 const ambientLight = new THREE.AmbientLight(
   0x223344,
   0.45,
@@ -196,12 +197,6 @@ const sunLight = new THREE.PointLight(
 
 sunLight.position.set(0, 0, 0);
 scene.add(sunLight);
-
-const textureLoader = new THREE.TextureLoader();
-
-const pickPosition = {x: 0, y: 0};
-clearPickPosition();
-
 
 // HELPER FUNCTIONS
 function easeInOutCubic(t) {
@@ -385,7 +380,6 @@ async function drawOrbitPaths(body) {
   return new THREE.LineLoop(geometry, material);
 }
 
-camera.position.z = 40;
 
 function resizeScene() {
   const width = sceneCanvas.clientWidth;
@@ -450,11 +444,13 @@ async function loadData() {
 async function initialize() {
   try {
     const { solarSystem, dsn } = await loadData();
-
-    // buildSolarSystem(solarSystem);
-    // buildDsnLinks(dsn);
+    camera.position.z = 40;
+    clearPickPosition();
 
     if (solarSystem && dsn) {
+      // oh, hello
+      console.log('Horizons initialized.');
+
       for (const body of solarSystem.bodies) {
         bodies[body.name] = body;
 
@@ -472,14 +468,6 @@ async function initialize() {
         }
       }
 
-      const celestialBodies = Object.values(bodies);
-      const maxX = Math.max(...celestialBodies.map(b => Math.abs(b.position.x)));
-      const maxY = Math.max(...celestialBodies.map(b => Math.abs(b.position.y)));
-      const maxZ = Math.max(...celestialBodies.map(b => Math.abs(b.position.z)));
-      const maxBoundary = Math.max(maxX, maxY, maxZ);
-      console.log(maxBoundary);
-
-      console.log(bodies);
       resizeScene();
       renderer.setAnimationLoop(animate);
     }
