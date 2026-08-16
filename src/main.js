@@ -10,7 +10,7 @@ import { PickHelper } from './scene/PickHelper.js';
 import { ORBITAL_ELEMENTS, bodyConfig } from './scene/Constants.js';
 
 
-// variables, DOM
+// variables, consts, DOM
 const sceneCanvas = document.getElementById('scene-canvas');
 const splashScreen = document.getElementById('splash');
 const underConstruction = document.getElementById('under-construction');
@@ -26,19 +26,26 @@ const scaleFactor = 50;
 const CAMERA_FLIGHT_BASE_DURATION = 900;
 const CAMERA_FLIGHT_DISTANCE_FACTOR = 180;
 const CLICK_DRAG_THRESHOLD = 6;
+const BLOOM_LAYER = 1;
+const MASK_LAYER = 2;
 let sceneInteractive = false;
 let cameraFlight = null;
 let pointerDownPosition = null;
 
 // basic scene setup
 const scene = new THREE.Scene();
+
 const camera = new THREE.PerspectiveCamera (
   50,             // FOV (def: 45)
   aspectRatio,    // aspect ratio
   0.1,            // near plane (def: 0.1)
   2000,           // far plane (def: 2000)
 );
+
 const textureLoader = new THREE.TextureLoader();
+const smaaPass = new SMAAPass();
+const outputPass = new OutputPass();
+
 const renderer = new THREE.WebGLRenderer({
   canvas: sceneCanvas,
   antialias: true,
@@ -61,11 +68,6 @@ const pickHelper = new PickHelper((object) => {
   idBox.style.visibility = 'visible';
   idBox.style.zIndex = '4';
 });
-
-const smaaPass = new SMAAPass();
-
-const BLOOM_LAYER = 1;
-const MASK_LAYER = 2;
 
 const bloomRenderPass = new RenderPass(scene, camera);
 const finalRenderPass = new RenderPass(scene, camera);
@@ -161,8 +163,6 @@ const mixPass = new ShaderPass(
 
   'baseTexture',
 );
-
-const outputPass = new OutputPass();
 
 const finalComposer = new EffectComposer(
   renderer,
