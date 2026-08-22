@@ -492,7 +492,7 @@ async function initialize() {
     const { solarSystem, dsn, starData } = await loadData();
     camera.position.z = 40;
     const STAR_RADIUS = 1000;
-    const BRIGHTNESS_FACTOR = 2;
+    // const BRIGHTNESS_FACTOR = 2;
     const positions = [];
     const colors = [];
     const geometry = new THREE.BufferGeometry();
