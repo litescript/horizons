@@ -423,9 +423,10 @@ function scalePosition(position) {
 }
 
 async function loadData() {
-  const [solarResponse, dsnResponse] = await Promise.all([
+  const [solarResponse, dsnResponse, starResponse] = await Promise.all([
     fetch('/api/solarsystem.json'),
     fetch('/api/dsn.json'),
+    fetch('/api/stars.json'),
   ]);
 
   if (!solarResponse.ok) {
@@ -436,44 +437,70 @@ async function loadData() {
     throw new Error(`DSN request failed: ${dsnResponse.status}`);
   }
 
-  const [solarSystem, dsn] = await Promise.all([
+  if (!starResponse.ok) {
+    throw new Error(`Star data request failed: ${starResponse.status}`);
+  }
+
+  const [solarSystem, dsn, starData] = await Promise.all([
     solarResponse.json(),
     dsnResponse.json(),
+    starResponse.json(),
   ]);
 
-  return { solarSystem, dsn };
+  return { solarSystem, dsn, starData };
 }
 
 async function initialize() {
   try {
-    const { solarSystem, dsn } = await loadData();
+    const { solarSystem, dsn, starData } = await loadData();
     camera.position.z = 40;
+    const positions = [];
+    const geometry = new THREE.BufferGeometry();
     clearPickPosition();
 
-    if (solarSystem && dsn) {
-      // oh, hello
-      console.log('Horizons initialized.');
+    // oh, hello
+    console.log('Horizons initialized.');
 
-      for (const body of solarSystem.bodies) {
-        bodies[body.name] = body;
+    for (const body of solarSystem.bodies) {
+      bodies[body.name] = body;
 
-        const mesh = await createBodyMesh(body);
-        mesh.position.copy(scalePosition(body.position));
+      const mesh = await createBodyMesh(body);
+      mesh.position.copy(scalePosition(body.position));
 
-        const orbit = await drawOrbitPaths(body);
+      const orbit = await drawOrbitPaths(body);
 
-        meshes[body.name] = mesh;
-        scene.add(mesh);
+      meshes[body.name] = mesh;
+      scene.add(mesh);
 
-        if (orbit) {
-          orbits[body.name] = orbit;
-          scene.add(orbit);
-        }
+      if (orbit) {
+        orbits[body.name] = orbit;
+        scene.add(orbit);
       }
-
-      resizeScene();
-      renderer.setAnimationLoop(animate);
     }
+
+    for (const star of starData.stars) {
+      positions.push(
+        star.ecliptic.x * 500,
+        star.ecliptic.y * 500,
+        star.ecliptic.z * 500,
+      );
+    }
+
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(positions,3)
+    );
+
+    const material = new THREE.PointsMaterial({
+      size: 1,
+    });
+
+    const starField = new THREE.Points(geometry, material);
+    scene.add(starField);
+
+    resizeScene();
+    renderer.setAnimationLoop(animate);
+
   } catch (error) {
     console.error('Could not initialize Horizons:', error);
   }
