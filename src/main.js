@@ -422,6 +422,43 @@ function scalePosition(position) {
   return vector.normalize().multiplyScalar(scaledDistance);
 }
 
+function bvToRgb(bv) {
+  if (!Number.isFinite(bv)) {
+    return { r: 1, g: 1, b: 1 };
+  }
+
+  // clamp to a practical visible-star range
+  const t = Math.max(-0.4, Math.min(2.0, bv));
+
+  let r;
+  let g;
+  let b;
+
+  if (t < 0.0) {
+    r = 0.65;
+    g = 0.75;
+    b = 1.0;
+  } else if (t < 0.4) {
+    r = 0.8;
+    g = 0.85;
+    b = 1.0;
+  } else if (t < 0.8) {
+    r = 1.0;
+    g = 0.95;
+    b = 0.8;
+  } else if (t < 1.3) {
+    r = 1.0;
+    g = 0.75;
+    b = 0.45;
+  } else {
+    r = 1.0;
+    g = 0.45;
+    b = 0.25;
+  }
+
+  return { r, g, b };
+}
+
 async function loadData() {
   const [solarResponse, dsnResponse, starResponse] = await Promise.all([
     fetch('/api/solarsystem.json'),
@@ -455,9 +492,8 @@ async function initialize() {
     const { solarSystem, dsn, starData } = await loadData();
     camera.position.z = 40;
     const STAR_RADIUS = 1000;
+    const BRIGHTNESS_FACTOR = 2;
     const positions = [];
-    const mags = [];
-    const brightness = [];
     const colors = [];
     const geometry = new THREE.BufferGeometry();
     clearPickPosition();
@@ -465,7 +501,7 @@ async function initialize() {
     // oh, hello
     console.log('Horizons initialized.');
 
-    // until i actually use the DSN data this literally just quiets the unused variable warning
+    // until i actually use the DSN data this literally just quiets the linter
     console.log('DSN data loaded OK:', !!dsn);
 
     for (const body of solarSystem.bodies) {
@@ -485,26 +521,30 @@ async function initialize() {
       }
     }
 
+    const mags = starData.stars.map(star => star.mag);
+    const MAX_MAG = Math.max(...mags);
+    const MIN_MAG = Math.min(...mags);
+
     for (const star of starData.stars) {
       positions.push(
         star.ecliptic.x * STAR_RADIUS,
         star.ecliptic.y * STAR_RADIUS,
         star.ecliptic.z * STAR_RADIUS,
       );
-      mags.push(
-        star.mag,
+
+      const normalized = (MAX_MAG - star.mag) / (MAX_MAG - MIN_MAG);
+      const brightness =
+        // 0.1 + 0.9 * (normalized ** BRIGHTNESS_FACTOR);
+        0.5 + 0.5 * normalized;
+
+      const { r, g, b } = bvToRgb(star.bv);
+
+      colors.push(
+        r * brightness,
+        g * brightness,
+        b * brightness,
       );
-    }
-    const MAX_MAG = Math.max(...mags);
-    const MIN_MAG = Math.min(...mags);
-
-    for (const mag of mags) {
-      const normalized = (MAX_MAG - mag) / (MAX_MAG - MIN_MAG);
-      brightness.push(normalized ** 5);
-    }
-
-    for (const value of brightness) {
-      colors.push(value, value, value);
+      // colors.push(r, g, b);
     }
 
     geometry.setAttribute(
@@ -519,7 +559,7 @@ async function initialize() {
 
     const material = new THREE.PointsMaterial({
       size: 1,
-      vertexColor: true,
+      vertexColors: true,
     });
 
     const starField = new THREE.Points(geometry, material);
