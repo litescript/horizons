@@ -454,12 +454,16 @@ async function initialize() {
   try {
     const { solarSystem, dsn, starData } = await loadData();
     camera.position.z = 40;
+    const STAR_RADIUS = 500;
     const positions = [];
     const geometry = new THREE.BufferGeometry();
     clearPickPosition();
 
     // oh, hello
     console.log('Horizons initialized.');
+
+    // until i actually use the DSN data this literally just quiets the unused variable warning
+    console.log('DSN data loaded OK:', !!dsn);
 
     for (const body of solarSystem.bodies) {
       bodies[body.name] = body;
@@ -480,15 +484,15 @@ async function initialize() {
 
     for (const star of starData.stars) {
       positions.push(
-        star.ecliptic.x * 500,
-        star.ecliptic.y * 500,
-        star.ecliptic.z * 500,
+        star.ecliptic.x * STAR_RADIUS,
+        star.ecliptic.y * STAR_RADIUS,
+        star.ecliptic.z * STAR_RADIUS,
       );
     }
 
     geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(positions,3)
+      new THREE.Float32BufferAttribute(positions, 3)
     );
 
     const material = new THREE.PointsMaterial({
