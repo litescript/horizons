@@ -454,8 +454,11 @@ async function initialize() {
   try {
     const { solarSystem, dsn, starData } = await loadData();
     camera.position.z = 40;
-    const STAR_RADIUS = 500;
+    const STAR_RADIUS = 1000;
     const positions = [];
+    const mags = [];
+    const brightness = [];
+    const colors = [];
     const geometry = new THREE.BufferGeometry();
     clearPickPosition();
 
@@ -488,7 +491,26 @@ async function initialize() {
         star.ecliptic.y * STAR_RADIUS,
         star.ecliptic.z * STAR_RADIUS,
       );
+      mags.push(
+        star.mag,
+      );
     }
+    const MAX_MAG = Math.max(...mags);
+    const MIN_MAG = Math.min(...mags);
+
+    for (const mag of mags) {
+      const normalized = (MAX_MAG - mag) / (MAX_MAG - MIN_MAG);
+      brightness.push(normalized ** 5);
+    }
+
+    for (const value of brightness) {
+      colors.push(value, value, value);
+    }
+
+    geometry.setAttribute(
+      'color',
+      new THREE.Float32BufferAttribute(colors, 3)
+    );
 
     geometry.setAttribute(
       'position',
@@ -497,6 +519,7 @@ async function initialize() {
 
     const material = new THREE.PointsMaterial({
       size: 1,
+      vertexColor: true,
     });
 
     const starField = new THREE.Points(geometry, material);
